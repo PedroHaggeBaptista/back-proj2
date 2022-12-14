@@ -33,13 +33,6 @@ const getPredios = async (req, res) => {
 };
 
 const getEquipamentosRegistrados = async (req, res) => {
-  // //Valida se algum paremetro é inválido
-  // const errors = validationResult(req);
-  // if (!errors.isEmpty()) {
-  //   return res.status(400).json({
-  //     error: errors.errors[0].msg,
-  //   });
-  // }
   try {
     const result = await Device.pegarTodos();
     res.send(result);
@@ -156,6 +149,44 @@ const getInfosDevice = async (req, res) => {
   }
 };
 
+const updateDevice = async (req, res) => {
+  const { macAddress, deviceName , patId } = req.body;
+
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      error: errors.errors[0].msg,
+    });
+  }
+
+  try {
+    const result = await Device.updateDevice(macAddress, deviceName, patId);
+    res.send(result);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
+
+const deleteDevice = async (req, res) => {
+  const { macAddress } = req.params;
+
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      error: errors.errors[0].msg,
+    });
+  }
+
+  try {
+    const result = await Device.deleteDevice(macAddress);
+    res.send(result);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
+
 //Exporta as funções do controller para o ROUTER
 module.exports = {
   teste,
@@ -166,5 +197,7 @@ module.exports = {
   getPredios,
   getSalas,
   getEquipamentoSala,
-  getInfosDevice
+  getInfosDevice,
+  updateDevice,
+  deleteDevice
 };

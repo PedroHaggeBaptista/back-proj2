@@ -21,7 +21,7 @@ router.post(
     [body("deviceBattery", "Bateria do Patrimonio é necessário").exists({ checkFalsy: true })],
     deviceController.createDevice
 );
-router.get(
+router.post(
     "/getHistory",
     [body("patId", "ID de Patrimonio é necessário").exists({ checkFalsy: true })],
     deviceController.getHistory
@@ -54,12 +54,27 @@ router.post(
     "/getEquipamentoSala", 
     [body("predio", "Prédio é necessário").exists({ checkFalsy: true })],
     [body("sala", "Sala é necessária").exists({ checkFalsy: true })],
-    deviceController.getEquipamentoSala)
+    deviceController.getEquipamentoSala
+)
 
 router.get(
     "/infosDevice/:patId",
     [param("patId", "ID de Patrimonio é necessário").exists({ checkFalsy: true })],
     deviceController.getInfosDevice
+)
+
+router.put(
+    "/updateDevice",
+    [body("patId", "ID de Patrimonio é necessário").exists({ checkFalsy: true })],
+    [body("deviceName", "Nome do Patrimonio é necessário").exists({ checkFalsy: true })],
+    [body("macAddress", "MacAddress do Patrimonio é necessário").exists({ checkFalsy: true })],
+    deviceController.updateDevice
+)
+
+router.delete(
+    "/deleteDevice/:macAddress",
+    [param("macAddress", "MacAddress do Patrimonio é necessário").exists({ checkFalsy: true })],
+    deviceController.deleteDevice
 )
 
 //Exporta o ROUTER

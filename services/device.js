@@ -5,41 +5,34 @@ let newSSIDs = { ssid: [], rssi: [] };
 
 async function getRoom(array) {
   if (array.ssid == "" || array.rssi == "") {
-    return {
+      return {
       room: 404,
       building: 404,
-    }
+      };
   }
 
-  array.ssid.map(async (each, index) => {
-    if (each[0] == "i" && each[1] == "p" && each[2] == "t" && each[3] == "-") {
-      newSSIDs.ssid.push(each);
-      newSSIDs.rssi.push(array.rssi[index]);
-    }
-  });
+  if (array.ssid.length > 1) {
+      const max = Math.max(...array.rssi);
+      const index = array.rssi.indexOf(max);
+      let location = array.ssid[index].split("-")[1];
+      location = location.split("_");
+      const room = location[0];
+      const building = location[1];
 
-  if (newSSIDs.ssid.length > 1) {
-    const max = Math.max(...newSSIDs.rssi);
-    const index = newSSIDs.rssi.indexOf(max);
-    let location = newSSIDs.ssid[index].split("-")[1];
-    location = location.split("_");
-    const room = location[0];
-    const building = location[1];
-
-    return {
+      return {
       room: room,
       building: building,
-    };
+      };
   } else {
-    let location = newSSIDs.ssid[0].split("-")[1];
-    location = location.split("_");
-    const room = location[0];
-    const building = location[1];
+      let location = array.ssid[0].split("-")[1];
+      location = location.split("_");
+      const room = location[0];
+      const building = location[1];
 
-    return {
+      return {
       room: room,
       building: building,
-    };
+      };
   }
 }
 
@@ -50,38 +43,62 @@ class Device {
     let sala;
     let predio;
 
-    let patrimonioId = content.patrimonioId;
+    let macAddress = content.macAddress;
 
     let actualData = new Date().toUTCString();
-
-    console.log(actualData);
 
     try {
       const { room, building } = await getRoom(content);
       sala = room;
       predio = building;
     } catch (err) {
+      console.log(err)
       throw new Error(err);
     }
 
+    let device = "";
+
     try {
-      const device = await Patrimonio.findOne({ patrimonioId: patrimonioId });
+      device = await Patrimonio.findOne({ macAddress: macAddress });
+    } catch(err) {
+      throw new Error(err);
+    }
+
+    if (device == null) {
+      const newDevice = new Patrimonio({
+        patrimonioId: "",
+        macAddress: macAddress,
+        name: "",
+        sala: sala,
+        predio: predio,
+        historico: "[]",
+        batery: 100,
+        created_at: actualData,
+        updated_at: actualData,
+      })
+
+      try {
+        await newDevice.save();
+      } catch (err) {
+        console.log(err)
+        throw new Error(err);
+      }
+    } else {
       device.sala = sala;
       device.predio = predio;
       const edit = JSON.parse(device.historico);
-      edit.push({'local': `${sala}_${predio}`, 'data': actualData});
+      edit.push({ local: `${sala}_${predio}`, data: actualData });
       device.historico = JSON.stringify(edit);
-
+      device.updated_at = actualData;
+  
       try {
         await device.save();
       } catch (err) {
         throw new Error(err);
       }
-    } catch (err) {
-      throw new Error(err);
+  
+      newSSIDs = { ssid: [], rssi: [] };
     }
-
-    newSSIDs = { ssid: [], rssi: [] };
   }
 
   async pegarTodos() {
@@ -92,14 +109,14 @@ class Device {
     }
   }
 
-  async createDevice(
-    patID,
-    deviceName,
-    deviceSala,
-    devicePredio,
-    deviceBattery
-  ) {
+  async createDevice(patID, deviceName, deviceSala, devicePredio, deviceBattery) {
     const actualData = new Date().toUTCString();
+
+    const alreadyExist = await Patrimonio.findOne({ patrimonioId: patID });
+
+    if (alreadyExist.length > 0) {
+      throw new Error("Dispositivo com esse patrimonio já cadastrado");
+    }
 
     const device = new Patrimonio({
       patrimonioId: patID,
@@ -144,29 +161,29 @@ class Device {
     const result = await Patrimonio.find().distinct("predio");
 
     async function getQnts() {
-      for(let i = 0; i < result.length; i++) {
-        let qnt = []
+      for (let i = 0; i < result.length; i++) {
+        let qnt = [];
         try {
-          qnt = await Patrimonio.find({predio: result[i]})
+          qnt = await Patrimonio.find({ predio: result[i] });
         } catch {
-          throw new Error("Não foi possível verificar a quantidade")
+          throw new Error("Não foi possível verificar a quantidade");
         }
 
         const teste = {
-          'predio': result[i],
-          'qnt': qnt.length
-        }
+          predio: result[i],
+          qnt: qnt.length,
+        };
 
-        predios.push(teste)
+        predios.push(teste);
       }
     }
 
     try {
       await getQnts();
-    } catch (err){
-      throw new Error(err)
+    } catch (err) {
+      throw new Error(err);
     }
-    
+
     return predios;
   }
 
@@ -178,7 +195,7 @@ class Device {
       throw new Error("Erro ao buscar as informações no banco de dados");
     }
   }
-  
+
   async getEquipamentoSala(predio, sala) {
     try {
       const result = await Patrimonio.find({ sala: sala, predio: predio });
@@ -189,14 +206,48 @@ class Device {
   }
 
   async getInfosDevice(patId) {
-    try{
+    try {
       const device = await Patrimonio.findOne({ patrimonioId: patId });
       return device;
-    }catch{
+    } catch {
       throw new Error("Erro ao buscar as informações no banco de dados");
     }
+  }
 
-}
+  async updateDevice(macAddress, name, patId) {
+    let editing = {
+      name: "",
+      patrimonioId: "",
+    }
+
+    if (name != "") {
+      editing.name = name;
+    }
+
+    if(patId != "") {
+      editing.patrimonioId = String(patId);
+    }
+
+    if(patId == "" && name == "") {
+      throw new Error("Nenhum dado para atualizar");
+    }
+
+    try {
+      await Patrimonio.findOneAndUpdate({ macAddress: macAddress }, editing);
+      return "Atualizado com sucesso"
+    } catch {
+      throw new Error("Erro ao atualizar o dispositivo");
+    }
+  }
+
+  async deleteDevice(macAddress) {
+    try {
+      await Patrimonio.findOneAndDelete({ macAddress: macAddress });
+      return "Deletado com sucesso"
+    } catch {
+      throw new Error("Erro ao deletar o dispositivo");
+    }
+  }
 }
 
 module.exports = {

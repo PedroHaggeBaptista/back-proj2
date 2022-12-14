@@ -4,6 +4,8 @@ require("dotenv").config();
 var bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const cors = require("cors");
+swaggerJsdoc = require("swagger-jsdoc"),
+swaggerUi = require("swagger-ui-express");
 
 const app = express();
 app.use(cors());
@@ -16,41 +18,34 @@ app.use(
   })
 );
 
-let newSSIDs = {"ssid": [], "rssi": []};
+const options = {
+    definition: {
+        openapi: "3.0.0",
+        info: {
+        title: "IPT - IOT Project API",
+        version: "0.1.0",
+        description:
+            "Backend utilizada para conexão do FrontEnd com as informações recebedias dos dispositivos IOT, espelhados pelo campus do IPT",
+        license: {
+            name: "MIT",
+            url: "https://spdx.org/licenses/MIT.html",
+        },
+        },
+        servers: [
+        {
+            url: "http://localhost:3001",
+        },
+        ],
+    },
+    apis: ["./Routes/buzzer.js", "./Routes/user.js"],
+};
 
-function getRoom(array) {
-    if (array.ssid == "" || array.rssi == "") {
-        return "Sem salas por perto";
-    }
-
-    array.ssid.map(async (each, index) => {
-        if(each[0] == "e" && each[1] == "s" && each[2] == "p") {
-            newSSIDs.ssid.push(each);
-            newSSIDs.rssi.push(array.rssi[index]);
-        }
-    })
-
-    if (newSSIDs.ssid.length > 1) {
-        const max = Math.max(...newSSIDs.rssi);
-        const index = newSSIDs.rssi.indexOf(max)
-        let location = newSSIDs.ssid[index].split("-")[1]
-        location = location.split("_")
-        const room = location[0]
-        const building = location[1]
-
-        return(`O objeto está localizado na sala ${room} do prédio ${building}`)
-    } else {
-        let location = newSSIDs.ssid[0].split("-")[1]
-        location = location.split("_")
-        const room = location[0]
-        const building = location[1]
-
-        return {
-            "room": room,
-            "building": building
-        }
-    }
-}
+const specs = swaggerJsdoc(options);
+app.use(
+"/api-docs",
+swaggerUi.serve,
+swaggerUi.setup(specs)
+);
 
 mongoose.connect(`mongodb+srv://IPTracker:${process.env.MONGO_PASS}@cluster0.zyrrcuq.mongodb.net/test`, {
     useNewUrlParser: true,

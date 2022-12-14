@@ -41,6 +41,10 @@ class User {
         //Requisição de busca na tabela "users" para verificar a existência de um usuário com o email indicado no LOGIN
         const user = await Usuario.findOne({ email: email })
 
+        if(user == null) {
+            throw new Error("Email ou Senha inválidos")
+        }
+
         if(user.length == 0) {
             throw new Error("Email ou Senha inválidos")
         }
