@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
-const Usuario = require('../models/User');
+const Usuario = require('../Models/User');
 
 class User {
     async register(name, email, pass) {

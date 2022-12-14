@@ -36,7 +36,7 @@ async function getRoom(array) {
   }
 }
 
-const Patrimonio = require("../models/Devices");
+const Patrimonio = require("../Models/Devices");
 
 class Device {
   async teste(content) {
